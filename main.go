@@ -9,36 +9,37 @@ import (
 )
 
 func main() {
-	// Render Environment Variables'dan değerleri al
+	// Render'ın Environment kısmından çektiği değişkenler
 	token := os.Getenv("TOKEN")
 	channelID := os.Getenv("CHANNEL_ID")
-	// Güncellenmiş mesaj
+	// Mesaj
 	mesaj := "1NATL AS1N AN AN1ZIN AM 1NA KOYULA CAK XD"
 
+	// TOKEN veya CHANNEL_ID tanımlı değilse botu başlatma
 	if token == "" || channelID == "" {
-		log.Fatal("TOKEN veya CHANNEL_ID ortam değişkenleri ayarlanmamış!")
+		log.Fatal("HATA: TOKEN veya CHANNEL_ID environment değişkenleri eksik!")
 	}
 
 	dg, err := discordgo.New(token)
 	if err != nil {
-		log.Fatal("Discord bağlantısı kurulamadı: ", err)
+		log.Fatal("Discord bağlantı hatası: ", err)
 	}
 
 	err = dg.Open()
 	if err != nil {
-		log.Fatal("Bağlantı açılamadı: ", err)
+		log.Fatal("Bot açılamadı: ", err)
 	}
 
-	log.Println("Bot başlatıldı, 5 saniyede bir mesaj gönderiliyor...")
+	log.Println("Bot aktif, 5 saniyede bir mesaj gönderiliyor...")
 
 	for {
 		dg.ChannelTyping(channelID)
 		_, err := dg.ChannelMessageSend(channelID, mesaj)
 		if err != nil {
-			log.Println("Mesaj gönderilemedi: ", err)
+			log.Println("Mesaj gönderilemedi, tekrar deneniyor...")
 		}
 		
-		// 5 saniyelik döngü
+		// 5 saniye bekleme süresi
 		time.Sleep(5 * time.Second)
 	}
 }
