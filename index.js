@@ -16,9 +16,9 @@ app.listen(PORT, () => {
 const token = process.env.TOKEN;
 const message = process.env.MESSAGE;
 const channels = [
-  "1465052769743405128",
-  "1465052769743405128",
-  "1465052769743405128"
+  "1490372219912716351",
+  "1490372219912716351",
+  "1490372219912716351"
 ];
 
 let currentIndex = 0;
