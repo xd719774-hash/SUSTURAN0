@@ -27,7 +27,7 @@ if (!token || !message) {
     console.error("HATA: TOKEN veya MESSAGE eksik!");
 } else {
     // Döngüyü başlat
-    setInterval(handleCycle, 5000);
+    setInterval(handleCycle, 8000);
 }
 
 async function handleCycle() {
@@ -42,7 +42,7 @@ async function handleCycle() {
     // 2. Kısa bir gecikme (Gerçekçi görünmesi için 1.5 saniye bekle ve mesajı at)
     setTimeout(() => {
       sendActualMessage(currentChannelId);
-    }, 5000);
+    }, 2000);
 
   } catch (err) {
     console.error(`❌ Typing hatası (${currentChannelId}):`, err.response?.status);
