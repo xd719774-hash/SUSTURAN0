@@ -27,7 +27,7 @@ if (!token || !message) {
     console.error("HATA: TOKEN veya MESSAGE eksik!");
 } else {
     // Döngüyü başlat
-    setInterval(handleCycle, 8000);
+    setInterval(handleCycle, 10000);
 }
 
 async function handleCycle() {
