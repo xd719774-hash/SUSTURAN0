@@ -1,11 +1,13 @@
 const express = require('express');
-const axios = require("axios");
+const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.get("/", (req, res) => {
-  res.send("Bot yazma özelliğiyle aktif!");
+  res.send("Bot aktif ve çalışıyor!");
 });
 
 app.listen(PORT, () => {
@@ -14,61 +16,78 @@ app.listen(PORT, () => {
 
 // --- AYARLAR ---
 const token = process.env.TOKEN;
-const message = process.env.MESSAGE;
-const channels = [
-  "1486467888666640586",
-  "1486467888666640586",
-  "1486467888666640586"
-];
+// Render Environment Variables kısmına virgülle ayırarak birden fazla kanal ID yazabilirsin örn: ID1,ID2,ID3
+const channelsEnv = process.env.CHANNELS || "";
+const channels = channelsEnv.split(',').map(id => id.trim()).filter(Boolean);
 
-let currentIndex = 0;
+let channelIndex = 0;
+let messageIndex = 0;
 
-if (!token || !message) {
-    console.error("HATA: TOKEN veya MESSAGE eksik!");
+// Mesajları dosyadan oku
+function getMessages() {
+  try {
+    const filePath = path.join(__dirname, 'mesajlar.txt');
+    const data = fs.readFileSync(filePath, 'utf8');
+    // Satır satır ayır, boş satırları ve başındaki/sonundaki boşlukları temizle
+    return data.split('\n').map(m => m.trim()).filter(Boolean);
+  } catch (err) {
+    console.error("HATA: mesajlar.txt okunamadı!", err.message);
+    return [];
+  }
+}
+
+if (!token || channels.length === 0) {
+  console.error("HATA: TOKEN veya CHANNELS (Kanal ID'leri) eksik!");
 } else {
-    // Döngüyü başlat
-    setInterval(handleCycle, 10000);
+  // 3 saniyede bir çalıştır (3000 milisaniye)
+  setInterval(handleCycle, 3000);
 }
 
 async function handleCycle() {
-  const currentChannelId = channels[currentIndex];
+  const messages = getMessages();
+  if (messages.length === 0) {
+    console.error("HATA: Gönderilecek mesaj bulunamadı (mesajlar.txt boş).");
+    return;
+  }
+
+  const currentChannelId = channels[channelIndex];
+  const currentMessage = messages[messageIndex];
 
   try {
-    // 1. Önce "Yazıyor..." animasyonunu gönder
+    // 1. "Yazıyor..." animasyonu gönder
     await axios.post(`https://discord.com/api/v9/channels/${currentChannelId}/typing`, {}, {
       headers: { "Authorization": token }
     });
 
-    // 2. Kısa bir gecikme (Gerçekçi görünmesi için 1.5 saniye bekle ve mesajı at)
+    // 2. Kısa bir gecikme (1 saniye) sonra mesajı gönder
     setTimeout(() => {
-      sendActualMessage(currentChannelId);
-    }, 2000);
+      sendActualMessage(currentChannelId, currentMessage, messages.length);
+    }, 1000);
 
   } catch (err) {
-    console.error(`❌ Typing hatası (${currentChannelId}):`, err.response?.status);
+    console.error(`❌ Typing hatası (${currentChannelId}):`, err.response?.status || err.message);
     // Hata olsa bile sırayı kaydır ki takılmasın
-    currentIndex = (currentIndex + 1) % channels.length;
+    channelIndex = (channelIndex + 1) % channels.length;
   }
 }
 
-function sendActualMessage(channelId) {
-  // Mesajı olduğu gibi gönder (büyük/küçük harf dönüşümü yok)
-  const formattedMessage = message;
-  
+function sendActualMessage(channelId, messageContent, totalMessages) {
   axios.post(`https://discord.com/api/v9/channels/${channelId}/messages`, {
-    content: formattedMessage
+    content: messageContent
   }, {
     headers: {
       "Authorization": token,
       "Content-Type": "application/json"
     }
   }).then(() => {
-    console.log(`✅ Mesaj Gönderildi: ${channelId} - İçerik: "${formattedMessage}"`);
+    console.log(`✅ Gönderildi -> Kanal: ${channelId} | Mesaj: "${messageContent}"`);
     
-    // Mesaj başarılıysa bir sonraki kanala geç
-    currentIndex = (currentIndex + 1) % channels.length;
+    // Sıradaki kanal ve mesaja geç (ikisi de bağımsız veya sırayla döner)
+    channelIndex = (channelIndex + 1) % channels.length;
+    messageIndex = (messageIndex + 1) % totalMessages;
   }).catch((err) => {
-    console.error(`❌ Mesaj Hatası (${channelId}):`, err.response?.status);
-    currentIndex = (currentIndex + 1) % channels.length;
+    console.error(`❌ Mesaj Hatası (${channelId}):`, err.response?.status || err.message);
+    channelIndex = (channelIndex + 1) % channels.length;
+    messageIndex = (messageIndex + 1) % totalMessages;
   });
 }
