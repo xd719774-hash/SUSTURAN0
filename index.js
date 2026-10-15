@@ -16,19 +16,16 @@ app.listen(PORT, () => {
 
 // --- AYARLAR ---
 const token = process.env.TOKEN;
-// Render Environment Variables kısmına virgülle ayırarak birden fazla kanal ID yazabilirsin örn: ID1,ID2,ID3
 const channelsEnv = process.env.CHANNELS || "";
 const channels = channelsEnv.split(',').map(id => id.trim()).filter(Boolean);
 
 let channelIndex = 0;
 let messageIndex = 0;
 
-// Mesajları dosyadan oku
 function getMessages() {
   try {
     const filePath = path.join(__dirname, 'mesajlar.txt');
     const data = fs.readFileSync(filePath, 'utf8');
-    // Satır satır ayır, boş satırları ve başındaki/sonundaki boşlukları temizle
     return data.split('\n').map(m => m.trim()).filter(Boolean);
   } catch (err) {
     console.error("HATA: mesajlar.txt okunamadı!", err.message);
@@ -37,9 +34,9 @@ function getMessages() {
 }
 
 if (!token || channels.length === 0) {
-  console.error("HATA: TOKEN veya CHANNELS (Kanal ID'leri) eksik!");
+  console.error("HATA: TOKEN veya CHANNELS eksik!");
 } else {
-  // 3 saniyede bir çalıştır (3000 milisaniye)
+  // 3 saniyede bir çalıştır
   setInterval(handleCycle, 3000);
 }
 
@@ -54,39 +51,37 @@ async function handleCycle() {
   const currentMessage = messages[messageIndex];
 
   try {
-    // 1. "Yazıyor..." animasyonu gönder
+    // DİKKAT: Bot tokeni olduğu için başına 'Bot ' eklendi
     await axios.post(`https://discord.com/api/v9/channels/${currentChannelId}/typing`, {}, {
-      headers: { "Authorization": token }
+      headers: { "Authorization": `Bot ${token}` }
     });
 
-    // 2. Kısa bir gecikme (1 saniye) sonra mesajı gönder
     setTimeout(() => {
       sendActualMessage(currentChannelId, currentMessage, messages.length);
     }, 1000);
 
   } catch (err) {
     console.error(`❌ Typing hatası (${currentChannelId}):`, err.response?.status || err.message);
-    // Hata olsa bile sırayı kaydır ki takılmasın
     channelIndex = (channelIndex + 1) % channels.length;
   }
 }
 
 function sendActualMessage(channelId, messageContent, totalMessages) {
+  // DİKKAT: Bot tokeni olduğu için başına 'Bot ' eklendi
   axios.post(`https://discord.com/api/v9/channels/${channelId}/messages`, {
     content: messageContent
   }, {
     headers: {
-      "Authorization": token,
+      "Authorization": `Bot ${token}`,
       "Content-Type": "application/json"
     }
   }).then(() => {
     console.log(`✅ Gönderildi -> Kanal: ${channelId} | Mesaj: "${messageContent}"`);
     
-    // Sıradaki kanal ve mesaja geç (ikisi de bağımsız veya sırayla döner)
     channelIndex = (channelIndex + 1) % channels.length;
     messageIndex = (messageIndex + 1) % totalMessages;
   }).catch((err) => {
-    console.error(`❌ Mesaj Hatası (${channelId}):`, err.response?.status || err.message);
+    console.error(`❌ Mesaj Hatası (${channelId}):`, err.response?.status || err.message, err.response?.data);
     channelIndex = (channelIndex + 1) % channels.length;
     messageIndex = (messageIndex + 1) % totalMessages;
   });
