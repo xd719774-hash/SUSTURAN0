@@ -36,11 +36,11 @@ function getMessages() {
 if (!token || channels.length === 0) {
   console.error("HATA: TOKEN veya CHANNELS eksik!");
 } else {
-  // 3 saniyede bir çalıştır
+  // 3 saniyede bir doğrudan mesaj gönderimini başlat
   setInterval(handleCycle, 3000);
 }
 
-async function handleCycle() {
+function handleCycle() {
   const messages = getMessages();
   if (messages.length === 0) {
     console.error("HATA: Gönderilecek mesaj bulunamadı (mesajlar.txt boş).");
@@ -50,39 +50,23 @@ async function handleCycle() {
   const currentChannelId = channels[channelIndex];
   const currentMessage = messages[messageIndex];
 
-  try {
-    // DİKKAT: Bot tokeni olduğu için başına 'Bot ' eklendi
-    await axios.post(`https://discord.com/api/v9/channels/${currentChannelId}/typing`, {}, {
-      headers: { "Authorization": `Bot ${token}` }
-    });
-
-    setTimeout(() => {
-      sendActualMessage(currentChannelId, currentMessage, messages.length);
-    }, 1000);
-
-  } catch (err) {
-    console.error(`❌ Typing hatası (${currentChannelId}):`, err.response?.status || err.message);
-    channelIndex = (channelIndex + 1) % channels.length;
-  }
-}
-
-function sendActualMessage(channelId, messageContent, totalMessages) {
-  // DİKKAT: Bot tokeni olduğu için başına 'Bot ' eklendi
-  axios.post(`https://discord.com/api/v9/channels/${channelId}/messages`, {
-    content: messageContent
+  // Self-token kullanıldığı için 'Bot ' öneki EKlenmez, doğrudan token yazılır.
+  // Yazıyor isteği tamamen kaldırıldı, doğrudan mesaj atılıyor.
+  axios.post(`https://discord.com/api/v9/channels/${currentChannelId}/messages`, {
+    content: currentMessage
   }, {
     headers: {
-      "Authorization": `Bot ${token}`,
+      "Authorization": token,
       "Content-Type": "application/json"
     }
   }).then(() => {
-    console.log(`✅ Gönderildi -> Kanal: ${channelId} | Mesaj: "${messageContent}"`);
+    console.log(`✅ Gönderildi -> Kanal: ${currentChannelId} | Mesaj: "${currentMessage}"`);
     
     channelIndex = (channelIndex + 1) % channels.length;
-    messageIndex = (messageIndex + 1) % totalMessages;
+    messageIndex = (messageIndex + 1) % messages.length;
   }).catch((err) => {
-    console.error(`❌ Mesaj Hatası (${channelId}):`, err.response?.status || err.message, err.response?.data);
+    console.error(`❌ Mesaj Hatası (${currentChannelId}):`, err.response?.status || err.message);
     channelIndex = (channelIndex + 1) % channels.length;
-    messageIndex = (messageIndex + 1) % totalMessages;
+    messageIndex = (messageIndex + 1) % messages.length;
   });
 }
